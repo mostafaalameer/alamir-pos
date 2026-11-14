@@ -586,6 +586,7 @@ export class OrderService {
       const customerDelegate = (tx as any).customer;
       const loyaltyTxDelegate = (tx as any).loyaltyTransaction;
       const walletTxDelegate = (tx as any).walletTransaction;
+      const creditTxDelegate = (tx as any).creditTransaction;
 
       const requestedRefundAmount =
         refundOptions?.refundAmount !== undefined ? Number(refundOptions.refundAmount) : null;
@@ -628,13 +629,36 @@ export class OrderService {
               ? Number((restoredWalletBalance + effectiveRefundAmount).toFixed(2))
               : restoredWalletBalance;
 
+          const currentCreditBalance = Number(currentCustomer.creditBalance ?? 0);
+          const creditReduction =
+            order.paymentMethod === PaymentMethod.CREDIT && effectiveRefundAmount > 0
+              ? Number(Math.min(currentCreditBalance, effectiveRefundAmount).toFixed(2))
+              : 0;
+          const nextCreditBalance = Number((currentCreditBalance - creditReduction).toFixed(2));
+
           await customerDelegate.update({
             where: { id: order.customerId },
             data: {
               pointsBalance: nextPointsBalance,
               walletBalance: new Prisma.Decimal(walletRefundBalance.toFixed(2)),
+              ...(creditReduction > 0 && {
+                creditBalance: new Prisma.Decimal(nextCreditBalance.toFixed(2)),
+              }),
             },
           });
+
+          if (creditReduction > 0 && creditTxDelegate?.create) {
+            await creditTxDelegate.create({
+              data: {
+                customerId: order.customerId,
+                orderId: order.id,
+                amount: new Prisma.Decimal((-creditReduction).toFixed(2)),
+                balanceAfter: new Prisma.Decimal(nextCreditBalance.toFixed(2)),
+                type: 'ADJUSTMENT',
+                notes: `خصم مديونية مقابل مرتجع فاتورة رقم ${order.orderNumber}`,
+              },
+            });
+          }
 
           if (pointsEarnedToDeduct > 0 && loyaltyTxDelegate?.create) {
             await loyaltyTxDelegate.create({

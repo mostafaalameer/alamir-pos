@@ -42,8 +42,8 @@ import {
 import {
   createCustomerCloud,
   fetchOrderByNumber,
-  formatReturnReceiptCloud,
   kickCashDrawerCloud,
+  printReturnReceiptCloud,
   printThermalReceiptCloud,
   printZReportCloud,
   recordCashMovementCloud,
@@ -386,26 +386,34 @@ export function PosPage() {
         }));
 
       try {
-        const receipt = await formatReturnReceiptCloud({
-          orderNumber: returnOrderResult.orderNumber,
-          originalDate: returnOrderResult.createdAt,
-          cashierName: 'الكاشير',
+        const returnNumber = `RET-${Date.now().toString().slice(-6)}`;
+        const receipt = await printReturnReceiptCloud({
+          returnNumber,
+          originalOrderNumber: returnOrderResult.orderNumber,
+          cashierName: 'كاشير الأمير',
           refundMethod,
           refundAmount: finalRefundAmt,
+          paperWidth: '80mm',
+          customerName: returnOrderResult.customerName ?? undefined,
+          customerPhone: returnOrderResult.customerPhone ?? undefined,
           returnedItems: formattedItems,
-          isPartial: !returnedOrder.isReturned,
         });
-        setLastReturnReceipt(receipt);
+        setLastReturnReceipt({
+          base64Commands: receipt.escPosBase64,
+          previewText: receipt.printableText,
+          opensDrawer: refundMethod === 'CASH',
+        });
       } catch {
         setLastReturnReceipt({
           previewText:
             `--- إيصال مرتجع مبيعات (ماركت الأمير) ---\n` +
             `رقم الفاتورة الأصلية: ${returnOrderResult.orderNumber}\n` +
-            `المبلغ المسترد: ${finalRefundAmt.toFixed(2)} ج.م (${refundMethod === 'CASH' ? 'نقداً من الدرج' : 'إيداع بالمحفظة'
+            `نوع المرتجع: ${returnedOrder.isReturned ? 'مرتجع كامل' : 'مرتجع جزئي'}\n` +
+            `المبلغ المسترد: ${finalRefundAmt.toFixed(2)} ج.م (${
+              refundMethod === 'CASH' ? 'نقداً من الدرج' : 'إيداع بالمحفظة'
             })\n` +
             `الأصناف المسترجعة:\n` +
             formattedItems
-              .map((f: { name: string; quantity: number; lineTotal: number }) => `• ${f.name} ×${f.quantity} = ${f.lineTotal.toFixed(2)} ج.م`)
               .map(
                 (f: { name: string; quantity: number; unitPrice: number; lineTotal: number }) =>
                   `• ${f.name}\n   الكمية: ${f.quantity} × سعر الوحدة: ${f.unitPrice.toFixed(2)} ج.م = ${f.lineTotal.toFixed(2)} ج.م`

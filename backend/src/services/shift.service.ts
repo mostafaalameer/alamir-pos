@@ -71,7 +71,9 @@ export class ShiftService {
               cashier: {
                 select: { id: true, name: true, username: true },
               },
-              orders: true,
+              orders: {
+                include: { items: true },
+              },
               cashMovements: true,
             },
           })
@@ -84,7 +86,9 @@ export class ShiftService {
               cashier: {
                 select: { id: true, name: true, username: true },
               },
-              orders: true,
+              orders: {
+                include: { items: true },
+              },
               cashMovements: true,
             },
           });
@@ -123,14 +127,31 @@ export class ShiftService {
 
         if (order.isReturned) {
           returnedOrdersCount++;
-          totalReturns += amount;
+          totalReturns = Number((totalReturns + amount).toFixed(2));
           if (order.paymentMethod === PaymentMethod.CASH) {
-            cashReturns += amount;
+            cashReturns = Number((cashReturns + amount).toFixed(2));
           }
         } else {
           validOrdersCount++;
           totalChangeCreditedToWallets += changeToWallet;
           totalWalletRedemptions += walletUsed;
+
+          if (Array.isArray((order as any).items)) {
+            const partialReturnAmount = (order as any).items.reduce(
+              (sum: number, item: any) => {
+                const retQty = Number(item.returnedQuantity ?? 0);
+                return retQty > 0 ? sum + retQty * Number(item.unitPrice) : sum;
+              },
+              0
+            );
+            if (partialReturnAmount > 0) {
+              const roundedPartial = Number(partialReturnAmount.toFixed(2));
+              totalReturns = Number((totalReturns + roundedPartial).toFixed(2));
+              if (order.paymentMethod === PaymentMethod.CASH) {
+                cashReturns = Number((cashReturns + roundedPartial).toFixed(2));
+              }
+            }
+          }
         }
       }
 

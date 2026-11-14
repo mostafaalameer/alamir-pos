@@ -3,6 +3,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { LOCAL_SHIFT_ID, LOCAL_STARTING_CASH, useData } from '../../context/DataContext';
 import { useAdminContext } from '../../layouts/AdminLayout';
 import { DownloadButton } from '../../components/DownloadButton';
+import { LocalSqliteBridge } from '../../lib/offlineSqlite';
 
 const statusOf = (d: number) =>
   d === 0
@@ -27,12 +28,21 @@ export function ShiftsPage() {
     (s, o) => s + Number(o.walletAmountUsed ?? 0),
     0
   );
+  const shiftMovements = LocalSqliteBridge.getCashMovements(LOCAL_SHIFT_ID);
+  const totalCashIn = shiftMovements
+    .filter((m) => m.type === 'CASH_IN')
+    .reduce((s, m) => s + m.amount, 0);
+  const totalCashOut = shiftMovements
+    .filter((m) => m.type === 'CASH_OUT')
+    .reduce((s, m) => s + m.amount, 0);
   const localExpectedDrawerCash = Number(
     (
       LOCAL_STARTING_CASH +
       localCash +
       localChangeToWallets -
-      localWalletRedemptions
+      localWalletRedemptions +
+      totalCashIn -
+      totalCashOut
     ).toFixed(2)
   );
 

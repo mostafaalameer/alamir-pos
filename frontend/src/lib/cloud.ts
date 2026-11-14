@@ -114,24 +114,6 @@ export async function returnOrderCloud(
   });
 }
 
-export async function formatReturnReceiptCloud(payload: {
-  orderNumber: string;
-  originalDate?: string;
-  cashierName?: string;
-  refundMethod?: 'CASH' | 'WALLET';
-  refundAmount: number;
-  returnedItems: Array<{ name: string; quantity: number; unitPrice: number; lineTotal: number }>;
-  isPartial?: boolean;
-}): Promise<{ base64Commands: string; previewText: string; opensDrawer: boolean }> {
-  return authedJson<{ base64Commands: string; previewText: string; opensDrawer: boolean }>(
-    '/hardware/return-receipt',
-    {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }
-  );
-}
-
 export async function recordCashMovementCloud(input: {
   type: 'CASH_IN' | 'CASH_OUT';
   amount: number;

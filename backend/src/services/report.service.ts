@@ -45,11 +45,16 @@ export class ReportService {
     let todayRevenue = 0;
     let todayProfit = 0;
     for (const order of todayOrders) {
-      const rev = Number(order.totalAmount);
-      const cost = order.items.reduce(
-        (sum, i) => sum + Number(i.costPrice) * i.quantity,
+      if (order.isReturned) continue;
+      const partialReturnVal = order.items.reduce(
+        (sum, i) => sum + Number(i.returnedQuantity ?? 0) * Number(i.unitPrice),
         0
       );
+      const rev = Math.max(0, Number(order.totalAmount) - partialReturnVal);
+      const cost = order.items.reduce((sum, i) => {
+        const netQty = Math.max(0, i.quantity - Number(i.returnedQuantity ?? 0));
+        return sum + Number(i.costPrice) * netQty;
+      }, 0);
       todayRevenue += rev;
       todayProfit += rev - cost;
     }
@@ -90,18 +95,31 @@ export class ReportService {
     let returnedOrdersCount = 0;
 
     for (const order of orders) {
+      const orderTotal = Number(order.totalAmount);
       if (order.isReturned) {
         returnedOrdersCount++;
-        returnedOrdersValue += Number(order.totalAmount);
+        returnedOrdersValue += orderTotal;
         continue;
       }
 
-      validOrdersCount++;
-      grossRevenue += Number(order.totalAmount);
-
+      let partialReturnVal = 0;
+      let hasPartialReturn = false;
       for (const item of order.items) {
-        totalCostOfGoodsSold += Number(item.costPrice) * item.quantity;
+        const retQty = Number(item.returnedQuantity ?? 0);
+        const netQty = Math.max(0, item.quantity - retQty);
+        if (retQty > 0) {
+          hasPartialReturn = true;
+          partialReturnVal += retQty * Number(item.unitPrice);
+        }
+        totalCostOfGoodsSold += Number(item.costPrice) * netQty;
       }
+
+      validOrdersCount++;
+      if (hasPartialReturn) {
+        returnedOrdersCount++;
+        returnedOrdersValue += partialReturnVal;
+      }
+      grossRevenue += Math.max(0, orderTotal - partialReturnVal);
     }
 
     const netProfit = Number((grossRevenue - totalCostOfGoodsSold).toFixed(2));
@@ -157,11 +175,22 @@ export class ReportService {
     ];
 
     for (const order of orders) {
-      const revenue = Number(order.totalAmount);
-      const cost = order.items.reduce(
-        (sum, item) => sum + Number(item.costPrice) * item.quantity,
-        0
-      );
+      const partialReturnVal = order.isReturned
+        ? Number(order.totalAmount)
+        : order.items.reduce(
+            (sum, item) => sum + Number(item.returnedQuantity ?? 0) * Number(item.unitPrice),
+            0
+          );
+      const hasPartialReturn = !order.isReturned && partialReturnVal > 0;
+      const revenue = order.isReturned
+        ? 0
+        : Math.max(0, Number((Number(order.totalAmount) - partialReturnVal).toFixed(2)));
+      const cost = order.items.reduce((sum, item) => {
+        const netQty = order.isReturned
+          ? 0
+          : Math.max(0, item.quantity - Number(item.returnedQuantity ?? 0));
+        return sum + Number(item.costPrice) * netQty;
+      }, 0);
       const profit = order.isReturned ? 0 : Number((revenue - cost).toFixed(2));
 
       salesSheet.addRow({
@@ -169,7 +198,7 @@ export class ReportService {
         createdAt: order.createdAt.toISOString(),
         cashierName: order.cashier?.name || '-',
         paymentMethod: order.paymentMethod,
-        status: order.isReturned ? 'مرتجع' : 'مكتمل',
+        status: order.isReturned ? 'مرتجع' : hasPartialReturn ? 'مرتجع جزئي' : 'مكتمل',
         totalAmount: revenue,
         totalCost: Number(cost.toFixed(2)),
         netProfit: profit,
@@ -386,11 +415,22 @@ export class ReportService {
     ];
 
     for (const order of orders) {
-      const revenue = Number(order.totalAmount);
-      const cost = order.items.reduce(
-        (sum, item) => sum + Number(item.costPrice) * item.quantity,
-        0
-      );
+      const partialReturnVal = order.isReturned
+        ? Number(order.totalAmount)
+        : order.items.reduce(
+            (sum, item) => sum + Number(item.returnedQuantity ?? 0) * Number(item.unitPrice),
+            0
+          );
+      const hasPartialReturn = !order.isReturned && partialReturnVal > 0;
+      const revenue = order.isReturned
+        ? 0
+        : Math.max(0, Number((Number(order.totalAmount) - partialReturnVal).toFixed(2)));
+      const cost = order.items.reduce((sum, item) => {
+        const netQty = order.isReturned
+          ? 0
+          : Math.max(0, item.quantity - Number(item.returnedQuantity ?? 0));
+        return sum + Number(item.costPrice) * netQty;
+      }, 0);
       const profit = order.isReturned ? 0 : Number((revenue - cost).toFixed(2));
 
       salesSheet.addRow({
@@ -398,7 +438,7 @@ export class ReportService {
         createdAt: order.createdAt.toISOString(),
         cashierName: order.cashier?.name || '-',
         paymentMethod: order.paymentMethod,
-        status: order.isReturned ? 'مرتجع' : 'مكتمل',
+        status: order.isReturned ? 'مرتجع' : hasPartialReturn ? 'مرتجع جزئي' : 'مكتمل',
         totalAmount: revenue,
         totalCost: Number(cost.toFixed(2)),
         netProfit: profit,

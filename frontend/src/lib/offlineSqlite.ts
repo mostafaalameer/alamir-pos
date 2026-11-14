@@ -1016,27 +1016,24 @@ export class LocalSqliteBridge {
 
   static parseScaleBarcode(rawBarcode: string): { weight: number; unitPrice: number; plu: string; totalPackPrice: number } | null {
     const digits = rawBarcode.trim().replace(/\D/g, '');
-    if (digits.length !== 13 || !digits.startsWith('2')) {
+    const parsed = parseScaleBarcode(digits);
+    if (!parsed.isScaleBarcode || !parsed.plu) {
       return null;
     }
 
-    const prefix = digits.slice(0, 2);
-    const plu = digits.slice(2, 7);
-    const valueNum = Number(digits.slice(7, 12));
-
-    const matchedProduct = this.findWeightedProductForScaleBarcode(rawBarcode);
+    const matchedProduct = this.findWeightedProductForScaleBarcode(digits);
     const retailPrice = matchedProduct ? matchedProduct.retailPrice : 100.0;
 
     let weight = 1.0;
     let totalPackPrice = retailPrice;
 
-    if (prefix === '20') {
+    if (parsed.type === 'PRICE') {
       // Price-embedded: digits 7-11 are piasters (e.g. 05450 -> 54.50 EGP)
-      totalPackPrice = Number((valueNum / 100).toFixed(2));
+      totalPackPrice = parsed.priceEgp ?? 0;
       weight = retailPrice > 0 ? Number((totalPackPrice / retailPrice).toFixed(3)) : 1.0;
     } else {
       // Weight-embedded (prefixes 21-29): digits 7-11 are grams (e.g. 01250 -> 1.250 kg)
-      weight = Number((valueNum / 1000).toFixed(3));
+      weight = parsed.weightKg ?? 0;
       totalPackPrice = Number((weight * retailPrice).toFixed(2));
     }
 
@@ -1047,7 +1044,7 @@ export class LocalSqliteBridge {
     return {
       weight,
       unitPrice: retailPrice,
-      plu,
+      plu: parsed.plu,
       totalPackPrice,
     };
   }

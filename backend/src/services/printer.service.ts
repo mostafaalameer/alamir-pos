@@ -138,7 +138,6 @@ export class ThermalPrinterService {
 
     for (const item of payload.items) {
       lines.push(
-        `${item.name} | ${item.quantity} x ${item.unitPrice.toFixed(2)} = ${item.lineTotal.toFixed(2)} ${env.CURRENCY}`,
         `${item.name}\n  الكمية: ${item.quantity} × سعر الوحدة: ${item.unitPrice.toFixed(2)} ${env.CURRENCY} = ${item.lineTotal.toFixed(2)} ${env.CURRENCY}`
       );
     }
@@ -450,7 +449,6 @@ export class ThermalPrinterService {
     lines.push('الأصناف المرتجعة:');
     for (const item of payload.returnedItems) {
       lines.push(
-        `${item.name} | ${item.quantity} x ${item.unitPrice.toFixed(2)} = ${item.lineTotal.toFixed(2)} ${env.CURRENCY}`,
         `${item.name}\n  الكمية: ${item.quantity} × سعر الوحدة: ${item.unitPrice.toFixed(2)} ${env.CURRENCY} = ${item.lineTotal.toFixed(2)} ${env.CURRENCY}`
       );
     }

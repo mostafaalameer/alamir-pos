@@ -189,7 +189,7 @@ export class AuthController {
     }
 
     const { pin, action, details } = parsed.data;
-    const isValid = pin === env.MANAGER_PIN || pin === '1234';
+    const isValid = pin === env.MANAGER_PIN;
 
     if (!isValid) {
       res.status(403).json({

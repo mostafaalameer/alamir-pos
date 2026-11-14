@@ -25,9 +25,9 @@ fn resolve_backend_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
         res_dir.join("resources").join("backend"),
         res_dir.join("backend"),
     ];
-    candidates
-        .into_iter()
-        .find(|dir| dir.join("node.exe").exists() && dir.join("dist").join("src").join("server.js").exists())
+    candidates.into_iter().find(|dir| {
+        dir.join("node.exe").exists() && dir.join("dist").join("src").join("server.js").exists()
+    })
 }
 
 fn spawn_bundled_backend(app: &tauri::AppHandle) -> Option<Child> {

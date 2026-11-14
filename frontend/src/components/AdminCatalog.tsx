@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { FileSpreadsheet, Layers, SlidersHorizontal, Tag, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { LocalBatch, LocalProduct, LocalSqliteBridge } from '../lib/offlineSqlite';
+import { daysUntil } from '../lib/dates';
 import { downloadReport, handleUnauthorized } from '../lib/auth';
 import { bulkDeleteProductsCloud, deleteProductCloud } from '../lib/cloud';
 
@@ -67,9 +68,6 @@ const AUDIT_REASONS = [
 
 const inputCls =
   'w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-lg px-3 py-2 text-sm text-white outline-none';
-
-const daysUntil = (date: string) =>
-  Math.ceil((new Date(date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
 const generateBarcode = () =>
   `622${Date.now().toString().slice(-9)}${Math.floor(Math.random() * 10)}`;
