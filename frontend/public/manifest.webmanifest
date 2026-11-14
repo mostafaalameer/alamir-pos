@@ -1,0 +1,12 @@
+{
+  "name": "ماركت الأمير - نظام الكاشير والإدارة",
+  "short_name": "ماركت الأمير",
+  "lang": "ar-EG",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0f766e",
+  "description": "نظام نقاط البيع الهجين وإدارة المخزون لماركت الأمير - مصر (ج.م)"
+}
+

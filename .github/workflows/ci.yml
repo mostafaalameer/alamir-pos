@@ -1,0 +1,67 @@
+name: Alamir Market POS CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  backend-verify:
+    name: Backend Typecheck, Build & Vitest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/alamir_pos_test
+      JWT_SECRET: ci-test-jwt-secret-key-alamir-market-pos
+      PORT: 4000
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install backend dependencies
+        run: npm install
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Backend TypeScript Check
+        run: npm run typecheck
+
+      - name: Run Backend Vitest Suite
+        run: npm test
+
+      - name: Build Backend Production Bundle
+        run: npm run build
+
+  frontend-verify:
+    name: Frontend Typecheck & Production Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Run Frontend TypeScript Check
+        run: npm run typecheck
+
+      - name: Build Frontend Production Bundle
+        run: npm run build
+

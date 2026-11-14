@@ -1,0 +1,63 @@
+name: Build and Release Alamir Market POS
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install & Build Backend
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Stage Backend Resources for Tauri
+        shell: pwsh
+        run: |
+          $src = "${{ github.workspace }}\backend"
+          $dst = "${{ github.workspace }}\frontend\src-tauri\resources\backend"
+          New-Item -ItemType Directory -Force -Path $dst | Out-Null
+          Copy-Item (Get-Command node).Source (Join-Path $dst "node.exe") -Force
+          Copy-Item (Join-Path $src "package.json") (Join-Path $dst "package.json") -Force
+          if (Test-Path (Join-Path $src ".env.example")) {
+            Copy-Item (Join-Path $src ".env.example") (Join-Path $dst ".env") -Force
+          }
+          robocopy (Join-Path $src "dist") (Join-Path $dst "dist") /MIR /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
+          robocopy (Join-Path $src "bin") (Join-Path $dst "bin") /MIR /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
+          robocopy (Join-Path $src "prisma") (Join-Path $dst "prisma") /MIR /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
+          robocopy (Join-Path $src "node_modules") (Join-Path $dst "node_modules") /MIR /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
+          if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE } else { exit 0 }
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Tauri Installer & Publish GitHub Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: frontend
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Alamir Market POS ${{ github.ref_name }}'
+          releaseBody: 'إصدار ${{ github.ref_name }} من نظام الأمير لنقاط البيع (Backend + Frontend).'
+          releaseDraft: false
+          prerelease: false
